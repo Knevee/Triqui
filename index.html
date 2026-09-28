@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>TRIQUI NEÓN — Night Grid</title>
+  <meta name="description" content="Triqui arcade neón: reta a la máquina en 4 niveles o juega con un amigo. ¡Supera tu racha!">
+  <!-- Bootstrap 5.3: solo grid, botones base, modales, cards y utilidades -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <!-- Google Fonts: display con carácter + texto legible -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;800;900&family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body data-difficulty="medium">
+
+  <!-- Fondo arcade: degradados + blobs + partículas + scanlines -->
+  <div class="bg-stage" aria-hidden="true">
+    <div class="bg-grid"></div>
+    <div class="blob blob-cyan"></div>
+    <div class="blob blob-magenta"></div>
+    <div class="blob blob-violet"></div>
+    <div id="floaters" class="floaters"></div>
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+  </div>
+
+  <canvas id="confetti" aria-hidden="true"></canvas>
+
+  <!-- Región viva para anunciar turno / ganador / empate -->
+  <p id="liveStatus" class="visually-hidden" role="status" aria-live="polite"></p>
+
+  <main class="container-xxl game-shell py-3 py-md-4">
+
+    <!-- ============ PANTALLA: INICIO ============ -->
+    <section id="screen-home" class="screen is-active" aria-labelledby="logo-title">
+      <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-8 text-center">
+          <div class="logo-wrap">
+            <div class="logo-badge" aria-hidden="true">
+              <svg viewBox="0 0 64 64" class="logo-grid">
+                <rect x="22" y="6" width="5" height="52" rx="2.5"/>
+                <rect x="37" y="6" width="5" height="52" rx="2.5"/>
+                <rect x="6" y="22" width="52" height="5" rx="2.5"/>
+                <rect x="6" y="37" width="52" height="5" rx="2.5"/>
+              </svg>
+            </div>
+            <p class="logo-kicker">ARCADE · NEÓN · NIGHT GRID</p>
+            <h1 id="logo-title" class="logo-title">
+              <span class="logo-triqui">TRIQUI</span>
+              <span class="logo-neon">NEÓN</span>
+            </h1>
+            <p class="tagline">El tres en raya que te pica: <strong>encadena victorias</strong>, rompe tu racha y reta a tus amigos.</p>
+          </div>
+
+          <div class="d-grid gap-3 d-sm-flex justify-content-sm-center mt-4">
+            <button id="btn-jugar" class="btn-neon btn-neon-primary btn-lg">▶&nbsp; Jugar</button>
+            <button id="btn-como" class="btn-neon btn-neon-ghost btn-lg" data-bs-toggle="modal" data-bs-target="#helpModal">Cómo se juega</button>
+          </div>
+
+          <div class="row g-3 mt-4 text-start">
+            <div class="col-12 col-sm-6">
+              <button id="btn-mode-ai" class="mode-card mode-ai w-100 text-start">
+                <span class="mode-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><rect x="4" y="7" width="16" height="10" rx="2"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><path d="M12 7V4M9 4h6"/></svg>
+                </span>
+                <span class="mode-text">
+                  <strong>Vs Máquina</strong>
+                  <small>4 niveles: de paseo a pesadilla</small>
+                </span>
+                <span class="mode-arrow" aria-hidden="true">→</span>
+              </button>
+            </div>
+            <div class="col-12 col-sm-6">
+              <button id="btn-mode-pvp" class="mode-card mode-pvp w-100 text-start">
+                <span class="mode-icon" aria-hidden="true">
+                  <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M3 19c0-3 2.5-5 5-5s5 2 5 5M11 19c0-3 2.5-5 5-5s5 2 5 5"/></svg>
+                </span>
+                <span class="mode-text">
+                  <strong>2 Jugadores</strong>
+                  <small>Duelo local en el mismo móvil</small>
+                </span>
+                <span class="mode-arrow" aria-hidden="true">→</span>
+              </button>
+            </div>
+          </div>
+
+          <p id="home-best" class="home-best mt-4">🔥 Mejor racha: —</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PANTALLA: CONFIGURACIÓN ============ -->
+    <section id="screen-config" class="screen" aria-labelledby="config-title">
+      <div class="row justify-content-center">
+        <div class="col-12 col-md-10 col-lg-9">
+          <button class="back-link" data-nav="home">← Menú</button>
+          <h2 id="config-title" class="screen-title">Prepara el <span class="hl">duelo</span></h2>
+
+          <div class="seg" role="tablist" aria-label="Modalidad">
+            <button id="seg-ai" class="seg-btn is-on" role="tab" aria-selected="true">🤖 Vs Máquina</button>
+            <button id="seg-pvp" class="seg-btn" role="tab" aria-selected="false">👥 2 Jugadores</button>
+          </div>
+
+          <!-- Config Vs Máquina -->
+          <div id="cfg-ai">
+            <h3 class="cfg-label">1 · Elige dificultad</h3>
+            <div class="row g-2 g-md-3" id="diff-cards" role="radiogroup" aria-label="Dificultad">
+              <div class="col-6 col-lg-3">
+                <button class="diff-card diff-easy" data-diff="easy" role="radio" aria-checked="false">
+                  <span class="diff-emoji" aria-hidden="true">🌱</span>
+                  <strong>Fácil</strong>
+                  <small>Despistada. Casi siempre juega al azar.</small>
+                </button>
+              </div>
+              <div class="col-6 col-lg-3">
+                <button class="diff-card diff-medium is-sel" data-diff="medium" role="radio" aria-checked="true">
+                  <span class="diff-emoji" aria-hidden="true">⚡</span>
+                  <strong>Medio</strong>
+                  <small>Mitad lista, mitad humana. Se equivoca.</small>
+                </button>
+              </div>
+              <div class="col-6 col-lg-3">
+                <button class="diff-card diff-hard" data-diff="hard" role="radio" aria-checked="false">
+                  <span class="diff-emoji" aria-hidden="true">🧠</span>
+                  <strong>Difícil</strong>
+                  <small>Bloquea, ataca doble y casi no perdona.</small>
+                </button>
+              </div>
+              <div class="col-6 col-lg-3">
+                <button class="diff-card diff-hardcore" data-diff="hardcore" role="radio" aria-checked="false">
+                  <span class="diff-emoji" aria-hidden="true">🔥</span>
+                  <strong>Hardcore</strong>
+                  <small>Perfecta. Empatarla ya es ganar. Te vacila.</small>
+                </button>
+              </div>
+            </div>
+
+            <h3 class="cfg-label">2 · Tu ficha</h3>
+            <div class="d-flex gap-3" role="radiogroup" aria-label="Tu símbolo">
+              <button id="pick-x" class="pick pick-x is-sel" role="radio" aria-checked="true" aria-label="Jugar con X">
+                <svg viewBox="0 0 64 64" class="pick-svg"><path d="M14 14 L50 50 M50 14 L14 50"/></svg>
+                <span>X · Rayo cian</span>
+              </button>
+              <button id="pick-o" class="pick pick-o" role="radio" aria-checked="false" aria-label="Jugar con O">
+                <svg viewBox="0 0 64 64" class="pick-svg"><circle cx="32" cy="32" r="19"/></svg>
+                <span>O · Orbe magenta</span>
+              </button>
+            </div>
+
+            <h3 class="cfg-label">3 · ¿Quién empieza?</h3>
+            <div class="seg" role="radiogroup" aria-label="Quién empieza">
+              <button class="seg-btn starter-btn is-on" data-starter="human" role="radio" aria-checked="true">Yo</button>
+              <button class="seg-btn starter-btn" data-starter="ai" role="radio" aria-checked="false">La máquina</button>
+              <button class="seg-btn starter-btn" data-starter="random" role="radio" aria-checked="false">🎲 Azar</button>
+            </div>
+          </div>
+
+          <!-- Config 2 Jugadores -->
+          <div id="cfg-pvp" hidden>
+            <h3 class="cfg-label">Nombres y fichas</h3>
+            <div class="row g-3">
+              <div class="col-12 col-sm-6">
+                <div class="player-card pc-x">
+                  <label class="form-label" for="pvp-name-x">Jugador X</label>
+                  <input id="pvp-name-x" class="form-control neon-input" maxlength="14" value="Jugador 1" autocomplete="off">
+                </div>
+              </div>
+              <div class="col-12 col-sm-6">
+                <div class="player-card pc-o">
+                  <label class="form-label" for="pvp-name-o">Jugador O</label>
+                  <input id="pvp-name-o" class="form-control neon-input" maxlength="14" value="Jugador 2" autocomplete="off">
+                </div>
+              </div>
+            </div>
+            <h3 class="cfg-label">¿Quién empieza?</h3>
+            <div class="seg" role="radiogroup" aria-label="Quién empieza en 2 jugadores">
+              <button class="seg-btn pvp-starter-btn is-on" data-starter="X" role="radio" aria-checked="true">Empieza X</button>
+              <button class="seg-btn pvp-starter-btn" data-starter="O" role="radio" aria-checked="false">Empieza O</button>
+              <button class="seg-btn pvp-starter-btn" data-starter="random" role="radio" aria-checked="false">🎲 Azar</button>
+            </div>
+          </div>
+
+          <div class="d-grid gap-2 d-sm-flex mt-4">
+            <button id="btn-start" class="btn-neon btn-neon-primary btn-lg flex-sm-grow-1">¡Al tablero! ⚡</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ PANTALLA: PARTIDA ============ -->
+    <section id="screen-game" class="screen" aria-labelledby="match-title">
+      <div class="row justify-content-center">
+        <div class="col-12 col-lg-10">
+          <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+            <button class="back-link" data-nav="home">← Menú</button>
+            <h2 id="match-title" class="screen-title m-0">Partida <span class="hl">neón</span></h2>
+            <button id="btn-sound" class="icon-btn" aria-pressed="false" aria-label="Activar sonido">
+              <svg id="ic-sound-off" viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9l5 6M21 9l-5 6" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+              <svg id="ic-sound-on" viewBox="0 0 24 24" hidden><path d="M4 9v6h4l5 4V5L8 9H4z" fill="currentColor"/><path d="M16 9a4 4 0 010 6M18.5 6.5a8 8 0 010 11" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/></svg>
+            </button>
+          </div>
+
+          <div class="d-flex align-items-center gap-2 mt-3 flex-wrap">
+            <span id="mode-badge" class="badge-neon">VS MÁQUINA</span>
+            <span id="diff-badge" class="badge-neon diff-medium">⚡ MEDIO</span>
+            <span id="streak-badge" class="badge-neon streak">🔥 Racha 0</span>
+          </div>
+
+          <!-- Marcador -->
+          <div class="scoreboard mt-3" role="group" aria-label="Marcador">
+            <div class="score-card sc-p1">
+              <small id="score-label-p1">TÚ</small>
+              <strong id="score-p1" class="score-num">0</strong>
+              <span id="score-sub-p1" class="score-sub">victorias</span>
+            </div>
+            <div class="score-card sc-draw">
+              <small>EMPATES</small>
+              <strong id="score-draw" class="score-num">0</strong>
+              <span class="score-sub" id="score-total">0 partidas</span>
+            </div>
+            <div class="score-card sc-p2">
+              <small id="score-label-p2">MÁQUINA</small>
+              <strong id="score-p2" class="score-num">0</strong>
+              <span id="score-sub-p2" class="score-sub">victorias</span>
+            </div>
+          </div>
+
+          <!-- Turno + pensando -->
+          <div class="turn-bar mt-3">
+            <div id="turn-chip" class="turn-chip turn-x">
+              <span id="turn-dot" class="turn-dot" aria-hidden="true"></span>
+              <span id="turn-text">Tu turno</span>
+            </div>
+            <div id="thinking" class="thinking" hidden>
+              <span class="think-orb" aria-hidden="true"></span>
+              <span id="thinking-text">La máquina está pensando…</span>
+            </div>
+          </div>
+          <p id="taunt" class="taunt" aria-hidden="true"></p>
+
+          <!-- Tablero -->
+          <div class="board-zone mt-2">
+            <div id="board" class="board" role="group" aria-label="Tablero de triqui">
+              <button class="cell" data-index="0" aria-label="Fila 1, columna 1, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="1" aria-label="Fila 1, columna 2, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="2" aria-label="Fila 1, columna 3, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="3" aria-label="Fila 2, columna 1, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="4" aria-label="Fila 2, columna 2, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="5" aria-label="Fila 2, columna 3, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="6" aria-label="Fila 3, columna 1, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="7" aria-label="Fila 3, columna 2, vacía"><span class="mark"></span></button>
+              <button class="cell" data-index="8" aria-label="Fila 3, columna 3, vacía"><span class="mark"></span></button>
+              <svg id="winline" viewBox="0 0 300 300" aria-hidden="true"><line id="winline-el" x1="0" y1="0" x2="0" y2="0"/></svg>
+            </div>
+          </div>
+
+          <!-- Controles -->
+          <div class="controls mt-3">
+            <button id="btn-restart" class="btn-neon btn-neon-small">↻ Reiniciar</button>
+            <button id="btn-rematch" class="btn-neon btn-neon-small" hidden>⚡ Revancha</button>
+            <button id="btn-change-diff" class="btn-neon btn-neon-small btn-neon-ghost">Dificultad</button>
+            <button id="btn-change-mode" class="btn-neon btn-neon-small btn-neon-ghost">Modalidad</button>
+            <button id="btn-reset-stats" class="btn-neon btn-neon-small btn-neon-danger">Stats ✕</button>
+          </div>
+          <p class="hint mt-2">Tip: con teclado, usa <kbd>Tab</kbd> + <kbd>Enter</kbd>. En Hardcore, empatar ya es una victoria moral. 😏</p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ MODAL: RESULTADO ============ -->
+  <div class="modal fade" id="resultModal" tabindex="-1" aria-labelledby="result-title" aria-hidden="true" data-bs-backdrop="static">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content neon-modal" id="result-card">
+        <div class="modal-body text-center p-4">
+          <div id="result-emoji" class="result-emoji" aria-hidden="true">🏆</div>
+          <h3 id="result-title" class="result-title">¡Victoria!</h3>
+          <p id="result-sub" class="result-sub">Brillante. La parrilla es tuya.</p>
+          <div class="d-grid gap-2 d-sm-flex justify-content-sm-center mt-3">
+            <button id="btn-revancha" class="btn-neon btn-neon-primary">⚡ Revancha</button>
+            <button id="btn-to-menu" class="btn-neon btn-neon-ghost" data-bs-dismiss="modal">Menú</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: CÓMO SE JUEGA ============ -->
+  <div class="modal fade" id="helpModal" tabindex="-1" aria-labelledby="help-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content neon-modal">
+        <div class="modal-body p-4">
+          <h3 id="help-title" class="result-title">Cómo se juega ⚡</h3>
+          <ol class="help-list">
+            <li>En tu turno toca una <strong>casilla vacía</strong> para poner tu ficha.</li>
+            <li>Gana quien alinee <strong>3 fichas</strong> en fila, columna o diagonal.</li>
+            <li>Si nadie alinea y el tablero se llena, es <strong>empate</strong>.</li>
+            <li>Vs Máquina: la máquina piensa unos milisegundos. Espera tu turno.</li>
+            <li>Encadena victorias para subir tu <strong>racha 🔥</strong> (se guarda por dificultad).</li>
+          </ol>
+          <div class="d-grid"><button class="btn-neon btn-neon-primary" data-bs-dismiss="modal">¡Entendido!</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ MODAL: CONFIRMACIÓN GENÉRICA ============ -->
+  <div class="modal fade" id="confirmModal" tabindex="-1" aria-labelledby="confirm-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-sm">
+      <div class="modal-content neon-modal">
+        <div class="modal-body text-center p-4">
+          <h3 id="confirm-title" class="result-title fs-5">¿Seguro?</h3>
+          <p id="confirm-text" class="result-sub">Se perderá el progreso de esta ronda.</p>
+          <div class="d-grid gap-2">
+            <button id="btn-confirm-yes" class="btn-neon btn-neon-danger">Sí, continuar</button>
+            <button class="btn-neon btn-neon-ghost" data-bs-dismiss="modal">Cancelar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/game.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/sound.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# Windows / macOS
+Thumbs.db
+.DS_Store
+Desktop.ini
+
+# Editores y temporales
+*.swp
+*~
+.vscode/
+.idea/
+
+# Node (por si se agregan dependencias de test a futuro)
+node_modules/
